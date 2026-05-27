@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSAP Tactical Dashboard - Secure Portal</title>
+    <style>
+        /* RESET & BASE THEME */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* SCREEN STATES */
+        .portal-state {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 999;
+            background-color: #0d1117;
+            transition: opacity 0.3s ease;
+            padding: 20px;
+        }
+
+        .dashboard-state {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* SECURE LOGIN CARD STYLING */
+        .login-card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-top: 4px solid #58a6ff;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .shield-icon {
+            font-size: 42px;
+            color: #58a6ff;
+            margin-bottom: 15px;
+        }
+
+        .login-card h2 {
+            color: #f0f6fc;
+            font-size: 22px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .login-card p.subtitle {
+            color: #8b949e;
+            font-size: 13px;
+            margin-bottom: 30px;
+            line-height: 1.4;
+        }
+
+        /* FORM INPUTS */
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            color: #8b949e;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            color: #f0f6fc;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+
+        .login-btn {
+            width: 100%;
+            background-color: #238636;
+            color: #ffffff;
+            border: 1px solid rgba(240, 246, 252, 0.1);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            background-color: #2ea043;
+        }
+
+        .security-notice {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #30363d;
+            font-size: 11px;
+            color: #8b949e;
+            line-height: 1.4;
+        }
+
+        .error-message {
+            color: #f25956;
+            font-size: 12px;
+            margin-bottom: 15px;
+            display: none;
+            background-color: rgba(242, 89, 86, 0.1);
+            border: 1px solid rgba(242, 89, 86, 0.2);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: left;
+        }
+
+        /* HEADER & STATUS BAR */
+        header {
+            background-color: #161b22;
+            border-bottom: 2px solid #30363d;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            flex-shrink: 0;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .badge {
+            background-color: #238636;
+            color: #ffffff;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .system-time {
+            font-family: monospace;
+            font-size: 18px;
+            color: #58a6ff;
+            font-weight: bold;
+            background: #0d1117;
+            padding: 4px 10px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+        }
+
+        .logout-btn {
+            background-color: transparent;
+            border: 1px solid #f25956;
+            color: #f25956;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: #f25956;
+            color: #ffffff;
+        }
+
+        /* TACTICAL WIDGET MODULES */
+        .widget {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .widget-header {
+            background-color: #21262d;
+            padding: 8px 14px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .widget-title {
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #8b949e;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .widget-title::before {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #58a6ff;
+            border-radius: 50%;
+        }
+
+        .widget.active-alert .widget-header .widget-title::before {
+            background-color: #da3633;
+            animation: pulse 1.5s infinite;
+        }
+
+        .reset-view-btn {
+            background-color: #30363d;
+            border: 1px solid #444c56;
+            color: #c9d1d9;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .reset-view-btn:hover {
+            background-color: #21262d;
+            border-color: #58a6ff;
+        }
+
+        .widget-body {
+            flex-grow: 1;
+            position: relative;
+            background-color: #0d1117;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: #0d1117;
+        }
+
+        /* NOAA SPC WIDGET STYLING */
+        .spc-container {
+            padding: 12px;
+            height: 100%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .spc-section-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #58a6ff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+            border-bottom: 1px solid #21262d;
+            padding-bottom: 2px;
+        }
+
+        .spc-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            padding: 6px 10px;
+            border-radius: 4px;
+        }
+
+        .spc-product-name {
+            font-weight: 500;
+            color: #c9d1d9;
+        }
+
+        .spc-status-tag {
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        .status-none { background-color: #21262d; color: #8b949e; }
+        .status-mdt { background-color: #e3b341; color: #0d1117; }
+        .status-high { background-color: #da3633; color: #ffffff; }
+        .status-watch { background-color: #b073d2; color: #ffffff; }
+
+        /* ULTRA-WIDE SHORTCUT TASKBAR MODIFIER */
+        .shortcut-container-wide {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            padding: 12px;
+            height: 100%;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .shortcut-item-wide {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px 16px;
+            text-decoration: none;
+            color: #c9d1d9;
+            transition: background-color 0.2s, border-color 0.2s;
+            flex: 1; /* Scales elements cleanly across the screen width */
+        }
+
+        .shortcut-item-wide:hover {
+            background-color: #30363d;
+            border-color: #58a6ff;
+        }
+
+        .shortcut-meta {
+            display: flex;
+            flex-direction: column;
+            padding-right: 10px;
+        }
+
+        .shortcut-name {
+            font-weight: bold;
+            font-size: 13px;
+            color: #f0f6fc;
+        }
+
+        .shortcut-desc {
+            font-size: 11px;
+            color: #8b949e;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .launch-arrow {
+            color: #58a6ff;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        /* ---------------------------------------------------- */
+        /* RESPONSIVE VIEWPORT ENGINE                           */
+        /* ---------------------------------------------------- */
+        
+        /* DESKTOP MATRIX STRUCTURE (3 rows layout configuration) */
+        @media screen and (min-width: 900px) {
+            .dashboard-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(2, 1fr) 95px; /* Rows 1 and 2 split territory, bottom row handles links */
+                gap: 12px;
+                padding: 12px;
+                flex-grow: 1;
+                height: calc(100vh - 60px);
+            }
+
+            /* Forces shortcut panel to stretch 100% cross ways */
+            .links-taskbar-row {
+                grid-column: span 2;
+            }
+        }
+
+        /* MOBILE PHONE VIEWPORTS (Auto-stack column layout) */
+        @media screen and (max-width: 899px) {
+            body {
+                overflow: hidden;
+            }
+
+            header {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 14px !important;
+            }
+
+            .system-time {
+                font-size: 13px;
+                padding: 3px 6px;
+            }
+
+            .logout-btn {
+                padding: 4px 8px;
+                font-size: 10px;
+            }
+
+            .dashboard-state {
+                overflow-y: auto;
+            }
+
+            .dashboard-grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 12px;
+                padding: 10px;
+                height: auto;
+            }
+
+            .widget {
+                height: 350px; 
+            }
+
+            /* Rescales taskbar back down for stacking scroll */
+            .shortcut-container-wide {
+                flex-direction: column;
+                height: auto;
+                gap: 8px;
+                padding: 10px;
+            }
+
+            .shortcut-item-wide {
+                width: 100%;
+            }
+
+            .shortcut-desc {
+                white-space: normal;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SECURE PORTAL OVERLAY CONTAINER -->
+    <div class="portal-state" id="portalOverlay" style="display: flex; opacity: 1;">
+        <div class="login-card">
+            <div class="shield-icon">🛡️</div>
+            <h2>PSAP Tactical Portal</h2>
+            <p class="subtitle">State Public Safety Information Network. Authorization required. Restricted to verified public safety whitelisted domains.</p>
+            
+            <div class="error-message" id="loginError">
+                ❌ Access Denied: Requires a valid public safety or municipal email domain (e.g., .gov, county, state, or authorized network).
+            </div>
+
+            <form id="loginForm" onsubmit="handleMockLogin(event)">
+                <div class="form-group">
+                    <label for="userEmail">Official Agency Email</label>
+                    <input type="text" id="userEmail" placeholder="badge_number@county.gov" value="dispatcher@county.gov" required>
+                </div>
+                <div class="form-group">
+                    <label for="userPassword">Terminal Access Password</label>
+                    <input type="password" id="userPassword" value="••••••••••••" required>
+                </div>
+                <button type="submit" class="login-btn">Secure Login</button>
+            </form>
+
+            <div class="security-notice">
+                <strong>WARNING:</strong> This system monitors all login attempts. Unauthorized access attempts will be automatically flagged and traced to the originating IP address.
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD UTILITY -->
+    <div class="dashboard-state" id="dashboardMain">
+        <header>
+            <div class="brand-section">
+                <span class="badge">Terminal Secure</span>
+                <h1 style="font-size: 18px; color: #f0f6fc;">PSAP Tactical Dashboard</h1>
+            </div>
+            <div class="header-controls">
+                <div class="system-time" id="consoleClock">00:00:00 UTC</div>
+                <button class="logout-btn" onclick="handleMockLogout()">Secure Logout</button>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            
+            <!-- ROW 1 / CELL 1: NOAA SPC PRODUCTS OUTLOOK MATRIX -->
+            <div class="widget">
+                <div class="widget-header">
+                    <div class="widget-title" style="color: #8b949e;">NOAA SPC Products & Watches</div>
+                    <button class="reset-view-btn" onclick="simulateSpcRefresh()">🔄 Refresh Feed</button>
+                </div>
+                <div class="widget-body">
+                    <div class="spc-container" id="spcContainer">
+                        <div class="spc-section-title">Active Severe Storm Watches</div>
+                        <div class="spc-row">
+                            <span class="spc-product-name">Tornado Watch #142 (Central OK Area)</span>
+                            <span class="spc-status-tag status-high">⚠️ High Risk</span>
+                        </div>
+                        <div class="spc-row">
+                            <span class="spc-product-name">Severe Thunderstorm Watch #140</span>
+                            <span class="spc-status-tag status-watch">Active</span>
+                        </div>
+                        <div class="spc-section-title">Convective Outlook Products</div>
+                        <div class="spc-row">
+                            <span class="spc-product-name">Day 1 Convective Outlook</span>
+                            <span class="spc-status-tag status-mdt">Moderate Risk</span>
+                        </div>
+                        <div class="spc-row">
+                            <span class="spc-product-name">Day 2 Convective Outlook</span>
+                            <span class="spc-status-tag status-none">Slight Risk</span>
+                        </div>
+                        <div class="spc-section-title">Thunderstorm Mesoscale Discussions</div>
+                        <div class="spc-row">
+                            <span class="spc-product-name">MCD #0384 - Convective Verification Matrix</span>
+                            <span class="spc-status-tag status-watch">Issued</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 1 / CELL 2: LIVE ARCGIS ODOT TRANSIT MAP -->
+            <div class="widget">
+                <div class="widget-header">
+                    <div class="widget-title" style="color: #58a6ff;">ODOT Live Traffic Conditions</div>
+                    <button class="reset-view-btn" onclick="resetWidgetFrame('trafficMapFrame')">🔄 Reset View</button>
+                </div>
+                <div class="widget-body">
+                    <iframe id="trafficMapFrame" src="https://experience.arcgis.com/experience/dbfe5818150b4ab0ab9d67f997026710" allowfullscreen></iframe>
+                </div>
+            </div>
+
+            <!-- ROW 2 / CELL 1: WEATHER RADAR TRACKING LOOP -->
+            <div class="widget">
+                <div class="widget-header">
+                    <div class="widget-title">Regional Broadcast Radar Tracking</div>
+                    <button class="reset-view-btn" onclick="resetWidgetFrame('broadcastFrame')">🔄 Reset View</button>
+                </div>
+                <div class="widget-body">
+                    <iframe id="broadcastFrame" src="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricWind=default&zoom=7&overlay=radar&product=radar&level=surface&lat=35.5&lon=-96.5" allowfullscreen></iframe>
+                </div>
+            </div>
+
+            <!-- ROW 2 / CELL 2: YOUR CUSTOM GOOGLE BOUNDARY DISTRICT MAP -->
+            <div class="widget active-alert">
+                <div class="widget-header">
+                    <div class="widget-title" style="color: #e3b341;">Agency Coverage & Districts</div>
+                    <button class="reset-view-btn" onclick="resetWidgetFrame('customCoverageFrame')">🔄 Reset View</button>
+                </div>
+                <div class="widget-body">
+                    <iframe id="customCoverageFrame" src="https://www.google.com/maps/d/embed?mid=1UisVv9PFahFjD7RjyQrIRfUNX34d_tY" allowfullscreen></iframe>
+                </div>
+            </div>
+
+            <!-- ROW 3: ULTRA-WIDE COMMAND SHORTCUTS BOTTOM TASKBAR -->
+            <div class="widget links-taskbar-row">
+                <div class="widget-header">
+                    <div class="widget-title" style="color: #58a6ff;">Primary Command Shortcuts Taskbar</div>
+                    <span style="font-size: 11px; color: #8b949e;">Global Network Launches</span>
+                </div>
+                <div class="widget-body">
+                    <div class="shortcut-container-wide">
+                        
+                        <!-- RapidSOS Portal Link -->
+                        <a href="https://rapidsosportal.com/" target="_blank" class="shortcut-item-wide">
+                            <div class="shortcut-meta">
+                                <span class="shortcut-name">RapidSOS Portal</span>
+                                <span class="shortcut-desc">Location tracking and supplement device telemetry logs.</span>
+                            </div>
+                            <span class="launch-arrow">🗗</span>
+                        </a>
+
+                        <!-- ODOT Traffic Portal Link -->
+                        <a href="https://oklahoma.gov/odot/travel/traffic/drive-oklahoma.html" target="_blank" class="shortcut-item-wide">
+                            <div class="shortcut-meta">
+                                <span class="shortcut-name">Drive Oklahoma / ODOT</span>
+                                <span class="shortcut-desc">State highway conditions, construction grids, and live logs.</span>
+                            </div>
+                            <span class="launch-arrow">🗗</span>
+                        </a>
+
+                        <!-- National Weather Service Core Link -->
+                        <a href="https://www.weather.gov/" target="_blank" class="shortcut-item-wide">
+                            <div class="shortcut-meta">
+                                <span class="shortcut-name">NWS Clearinghouse</span>
+                                <span class="shortcut-desc">Official regional weather briefing notes and warning indexes.</span>
+                            </div>
+                            <span class="launch-arrow">🗗</span>
+                        </a>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- INTERFACE ENGINE SCRIPT -->
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toUTCString().replace('GMT', 'UTC');
+            const clockEl = document.getElementById('consoleClock');
+            if (clockEl) {
+                clockEl.textContent = timeString.slice(17, 25) + ' UTC';
+            }
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function resetWidgetFrame(frameId) {
+            const targetFrame = document.getElementById(frameId);
+            if (targetFrame) {
+                targetFrame.src = targetFrame.src;
+            }
+        }
+
+        function simulateSpcRefresh() {
+            const container = document.getElementById('spcContainer');
+            if (container) {
+                container.style.opacity = '0.3';
+                setTimeout(() => { container.style.opacity = '1'; }, 150);
+            }
+        }
+
+        function handleMockLogin(event) {
+            if (event) event.preventDefault();
+            
+            const emailInput = document.getElementById('userEmail');
+            const errorBanner = document.getElementById('loginError');
+            const overlay = document.getElementById('portalOverlay');
+            const mainDash = document.getElementById('dashboardMain');
+
+            if (!emailInput || !overlay || !mainDash) return;
+
+            const emailValue = emailInput.value.trim().toLowerCase();
+
+            if (emailValue.includes('.gov') || emailValue.includes('county') || emailValue.includes('state') || emailValue.includes('ems') || emailValue.includes('police') || emailValue === 'dispatcher') {
+                if (errorBanner) errorBanner.style.display = 'none';
+                
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    mainDash.style.visibility = 'visible';
+                    mainDash.style.opacity = '1';
+                }, 300);
+            } else {
+                if (errorBanner) errorBanner.style.display = 'block';
+            }
+        }
+
+        function handleMockLogout() {
+            const overlay = document.getElementById('portalOverlay');
+            const mainDash = document.getElementById('dashboardMain');
+
+            if (!overlay || !mainDash) return;
+
+            mainDash.style.opacity = '0';
+            setTimeout(() => {
+                mainDash.style.visibility = 'hidden';
+                overlay.style.display = 'flex';
+                setTimeout(() => {
+                    overlay.style.opacity = '1';
+                }, 50);
+                
+                const emailInput = document.getElementById('userEmail');
+                if (emailInput && !emailInput.value) {
+                    emailInput.value = 'dispatcher@county.gov';
+                }
+            }, 300);
+        }
+    </script>
+</body>
+</html>
